@@ -29,6 +29,7 @@ import static jdk.nashorn.internal.lookup.Lookup.MH;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import jdk.internal.dynalink.CallSiteDescriptor;
 import jdk.internal.dynalink.linker.GuardedInvocation;
 import jdk.internal.dynalink.linker.LinkRequest;
@@ -42,9 +43,10 @@ import jdk.nashorn.internal.runtime.linker.NashornCallSiteDescriptor;
  */
 public final class WithObject extends ScriptObject implements Scope {
 
-    private static final MethodHandle WITHEXPRESSIONFILTER = findOwnMH("withFilterExpression", Object.class, Object.class);
-    private static final MethodHandle WITHSCOPEFILTER      = findOwnMH("withFilterScope",      Object.class, Object.class);
-    private static final MethodHandle BIND_TO_EXPRESSION   = findOwnMH("bindToExpression",     Object.class, Object.class, Object.class);
+    private static final MethodHandle WITHEXPRESSIONFILTER   = findOwnMH("withFilterExpression", Object.class, Object.class);
+    private static final MethodHandle WITHSCOPEFILTER        = findOwnMH("withFilterScope",      Object.class, Object.class);
+    private static final MethodHandle BIND_TO_EXPRESSION_OBJ = findOwnMH("bindToExpression",     Object.class, Object.class, Object.class);
+    private static final MethodHandle BIND_TO_EXPRESSION_FN  = findOwnMH("bindToExpression",     Object.class, ScriptFunction.class, Object.class);
 
     /** With expression object. */
     private final Object expression;
@@ -230,22 +232,35 @@ public final class WithObject extends ScriptObject implements Scope {
         return (Scope) proto;
     }
 
+    private static GuardedInvocation fixReceiverType(final GuardedInvocation link, final MethodHandle filter) {
+        // The receiver may be an Object or a ScriptObject.
+        final MethodType invType = link.getInvocation().type();
+        final MethodType newInvType = invType.changeParameterType(0, filter.type().returnType());
+        return link.asType(newInvType);
+    }
+
     private static GuardedInvocation fixExpressionCallSite(final NashornCallSiteDescriptor desc, final GuardedInvocation link) {
         // If it's not a getMethod, just add an expression filter that converts WithObject in "this" position to its
         // expression.
         if(!"getMethod".equals(desc.getFirstOperator())) {
-            return link.filterArguments(0, WITHEXPRESSIONFILTER);
+            return fixReceiverType(link, WITHEXPRESSIONFILTER).filterArguments(0, WITHEXPRESSIONFILTER);
         }
 
+        final MethodHandle linkInvocation = link.getInvocation();
+        final MethodType linkType = linkInvocation.type();
+        final boolean linkReturnsFunction = ScriptFunction.class.isAssignableFrom(linkType.returnType());
         return link.replaceMethods(
                 // Make sure getMethod will bind the script functions it receives to WithObject.expression
-                MH.foldArguments(BIND_TO_EXPRESSION, filter(link.getInvocation(), WITHEXPRESSIONFILTER)),
+                MH.foldArguments(linkReturnsFunction ? BIND_TO_EXPRESSION_FN : BIND_TO_EXPRESSION_OBJ,
+                        filter(linkInvocation.asType(linkType.changeReturnType(
+                                linkReturnsFunction ? ScriptFunction.class : Object.class)), WITHEXPRESSIONFILTER)),
                 // No clever things for the guard -- it is still identically filtered.
                 filterGuard(link, WITHEXPRESSIONFILTER));
     }
 
     private static GuardedInvocation fixScopeCallSite(final GuardedInvocation link) {
-        return link.replaceMethods(filter(link.getInvocation(), WITHSCOPEFILTER), filterGuard(link, WITHSCOPEFILTER));
+        final GuardedInvocation newLink = fixReceiverType(link, WITHSCOPEFILTER);
+        return link.replaceMethods(filter(newLink.getInvocation(), WITHSCOPEFILTER), filterGuard(newLink, WITHSCOPEFILTER));
     }
 
     private static MethodHandle filterGuard(final GuardedInvocation link, final MethodHandle filter) {
@@ -269,7 +284,11 @@ public final class WithObject extends ScriptObject implements Scope {
 
     @SuppressWarnings("unused")
     private static Object bindToExpression(final Object fn, final Object receiver) {
-        return fn instanceof ScriptFunction ? ((ScriptFunction) fn).makeBoundFunction(withFilterExpression(receiver), new Object[0]) : fn;
+        return fn instanceof ScriptFunction ? bindToExpression((ScriptFunction) fn, receiver) : fn;
+    }
+
+    private static Object bindToExpression(final ScriptFunction fn, final Object receiver) {
+        return fn.makeBoundFunction(withFilterExpression(receiver), new Object[0]);
     }
 
     /**
