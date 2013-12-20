@@ -26,8 +26,6 @@
 package jdk.nashorn.internal.runtime;
 
 import static jdk.nashorn.internal.runtime.PropertyHashMap.EMPTY_HASHMAP;
-import static jdk.nashorn.internal.runtime.arrays.ArrayIndex.getArrayIndex;
-import static jdk.nashorn.internal.runtime.arrays.ArrayIndex.isValidArrayIndex;
 
 import java.lang.invoke.SwitchPoint;
 import java.lang.ref.WeakReference;
@@ -52,8 +50,6 @@ import java.util.WeakHashMap;
 public final class PropertyMap implements Iterable<Object>, PropertyListener {
     /** Used for non extensible PropertyMaps, negative logic as the normal case is extensible. See {@link ScriptObject#preventExtensions()} */
     public static final int NOT_EXTENSIBLE        = 0b0000_0001;
-    /** Does this map contain valid array keys? */
-    public static final int CONTAINS_ARRAY_KEYS   = 0b0000_0010;
     /** This mask is used to preserve certain flags when cloning the PropertyMap. Others should not be copied */
     private static final int CLONEABLE_FLAGS_MASK = 0b0000_1111;
     /** Has a listener been added to this property map. This flag is not copied when cloning a map. See {@link PropertyListener} */
@@ -95,20 +91,25 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
      * @param fieldCount   Number of fields in use.
      * @param fieldMaximum Number of fields available.
      * @param spillLength  Number of spill slots used.
-     * @param containsArrayKeys True if properties contain numeric keys
      */
-    private PropertyMap(final PropertyHashMap properties, final int fieldCount, final int fieldMaximum, final int spillLength, final boolean containsArrayKeys) {
+    private PropertyMap(final PropertyHashMap properties, final int fieldCount, final int fieldMaximum, final int spillLength) {
         this.properties   = properties;
         this.fieldCount   = fieldCount;
         this.fieldMaximum = fieldMaximum;
         this.spillLength  = spillLength;
-        if (containsArrayKeys) {
-            setContainsArrayKeys();
-        }
 
         if (Context.DEBUG) {
             count++;
         }
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param properties A {@link PropertyHashMap} with initial contents.
+     */
+    private PropertyMap(final PropertyHashMap properties) {
+        this(properties, 0, 0, 0);
     }
 
     /**
@@ -151,14 +152,11 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
         if (Context.DEBUG) {
             duplicatedCount++;
         }
-        return new PropertyMap(this.properties, 0, 0, 0, containsArrayKeys());
+        return new PropertyMap(this.properties);
     }
 
     /**
      * Public property map allocator.
-     *
-     * <p>It is the caller's responsibility to make sure that {@code properties} does not contain
-     * properties with keys that are valid array indices.</p>
      *
      * @param properties   Collection of initial properties.
      * @param fieldCount   Number of fields in use.
@@ -168,15 +166,11 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
      */
     public static PropertyMap newMap(final Collection<Property> properties, final int fieldCount, final int fieldMaximum,  final int spillLength) {
         PropertyHashMap newProperties = EMPTY_HASHMAP.immutableAdd(properties);
-        return new PropertyMap(newProperties, fieldCount, fieldMaximum, spillLength, false);
+        return new PropertyMap(newProperties, fieldCount, fieldMaximum, spillLength);
     }
 
     /**
      * Public property map allocator. Used by nasgen generated code.
-     *
-     * <p>It is the caller's responsibility to make sure that {@code properties} does not contain
-     * properties with keys that are valid array indices.</p>
-     *
      * @param properties Collection of initial properties.
      * @return New {@link PropertyMap}.
      */
@@ -190,7 +184,7 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
      * @return New empty {@link PropertyMap}.
      */
     public static PropertyMap newMap() {
-        return new PropertyMap(EMPTY_HASHMAP, 0, 0, 0, false);
+        return new PropertyMap(EMPTY_HASHMAP);
     }
 
     /**
@@ -299,9 +293,6 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
 
             if(!property.isSpill()) {
                 newMap.fieldCount = Math.max(newMap.fieldCount, property.getSlot() + 1);
-            }
-            if (isValidArrayIndex(getArrayIndex(property.getKey()))) {
-                newMap.setContainsArrayKeys();
             }
 
             newMap.spillLength += property.getSpillCount();
@@ -417,9 +408,6 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
 
         final PropertyMap newMap = new PropertyMap(this, newProperties);
         for (final Property property : otherProperties) {
-            if (isValidArrayIndex(getArrayIndex(property.getKey()))) {
-                newMap.setContainsArrayKeys();
-            }
             newMap.spillLength += property.getSpillCount();
         }
 
@@ -709,22 +697,6 @@ public final class PropertyMap implements Iterable<Object>, PropertyListener {
     @Override
     public Iterator<Object> iterator() {
         return new PropertyMapIterator(this);
-    }
-
-    /**
-     * Check if this map contains properties with valid array keys
-     *
-     * @return {@code true} if this map contains properties with valid array keys
-     */
-    public final boolean containsArrayKeys() {
-        return (flags & CONTAINS_ARRAY_KEYS) != 0;
-    }
-
-    /**
-     * Flag this object as having array keys in defined properties
-     */
-    private void setContainsArrayKeys() {
-        flags |= CONTAINS_ARRAY_KEYS;
     }
 
     /**

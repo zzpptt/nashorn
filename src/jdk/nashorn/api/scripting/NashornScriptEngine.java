@@ -285,10 +285,11 @@ public final class NashornScriptEngine extends AbstractScriptEngine implements C
                 final URL url = ((URLReader)reader).getURL();
                 final Charset cs = ((URLReader)reader).getCharset();
                 return new Source(url.toString(), url, cs);
+            } else {
+                return new Source(getScriptName(ctxt), Source.readFully(reader));
             }
-            return new Source(getScriptName(ctxt), Source.readFully(reader));
-        } catch (final IOException e) {
-            throw new ScriptException(e);
+        } catch (final IOException ioExp) {
+            throw new ScriptException(ioExp);
         }
     }
 
@@ -312,7 +313,7 @@ public final class NashornScriptEngine extends AbstractScriptEngine implements C
             if (! Modifier.isPublic(clazz.getModifiers())) {
                 throw new SecurityException(getMessage("implementing.non.public.interface", clazz.getName()));
             }
-            Context.checkPackageAccess(clazz);
+            Context.checkPackageAccess(clazz.getName());
         }
 
         ScriptObject realSelf = null;
@@ -575,14 +576,15 @@ public final class NashornScriptEngine extends AbstractScriptEngine implements C
         return new CompiledScript() {
             @Override
             public Object eval(final ScriptContext ctxt) throws ScriptException {
-                final ScriptObject globalObject = getNashornGlobalFrom(ctxt);
+                final ScriptObject global = getNashornGlobalFrom(ctxt);
                 // Are we running the script in the correct global?
-                if (func.getScope() == globalObject) {
-                    return evalImpl(func, ctxt, globalObject);
+                if (func.getScope() == global) {
+                    return evalImpl(func, ctxt, global);
+                } else {
+                    // ScriptContext with a different global. Compile again!
+                    // Note that we may still hit per-global compilation cache.
+                    return evalImpl(compileImpl(source, ctxt), ctxt, global);
                 }
-                // ScriptContext with a different global. Compile again!
-                // Note that we may still hit per-global compilation cache.
-                return evalImpl(compileImpl(source, ctxt), ctxt, globalObject);
             }
             @Override
             public ScriptEngine getEngine() {

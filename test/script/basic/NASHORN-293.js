@@ -40,13 +40,15 @@ for (var i = 0; i < 3; i++) {
     try {
         eval(src);
     } catch (e) {
-        printError(e);
+        var location =  e.fileName ? e.fileName.slice(-9) : "unknown source";
+        print(e.name, "@", location);
     }
 }
 for (var i = 0; i < 3; i++) {
     try {
         eval(src);
     } catch (e) {
-        printError(e);
+        var location =  e.fileName ? e.fileName.slice(-9) : "unknown source";
+        print(e.name, "@", location);
     }
 }

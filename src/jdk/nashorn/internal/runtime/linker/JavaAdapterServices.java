@@ -29,7 +29,6 @@ import static jdk.nashorn.internal.runtime.ECMAErrors.typeError;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
-import jdk.nashorn.internal.runtime.Context;
 import jdk.nashorn.internal.runtime.ScriptFunction;
 import jdk.nashorn.internal.runtime.ScriptObject;
 import jdk.nashorn.internal.runtime.ScriptRuntime;
@@ -54,8 +53,8 @@ public final class JavaAdapterServices {
      * @return the appropriately adapted method handle for invoking the script function.
      */
     public static MethodHandle getHandle(final ScriptFunction fn, final MethodType type) {
-        // JS "this" will be global object or undefined depending on if 'fn' is strict or not
-        return adaptHandle(fn.getBoundInvokeHandle(fn.isStrict()? ScriptRuntime.UNDEFINED : Context.getGlobal()), type);
+        // JS "this" will be null for SAMs
+        return adaptHandle(fn.getBoundInvokeHandle(null), type);
     }
 
     /**

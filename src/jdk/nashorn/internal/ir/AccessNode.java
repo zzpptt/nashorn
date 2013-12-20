@@ -25,6 +25,7 @@
 
 package jdk.nashorn.internal.ir;
 
+import jdk.nashorn.internal.codegen.types.Type;
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import jdk.nashorn.internal.ir.visitor.NodeVisitor;
 
@@ -45,12 +46,12 @@ public final class AccessNode extends BaseNode {
      * @param property  property
      */
     public AccessNode(final long token, final int finish, final Expression base, final IdentNode property) {
-        super(token, finish, base, false);
+        super(token, finish, base, false, false);
         this.property = property.setIsPropertyName();
     }
 
-    private AccessNode(final AccessNode accessNode, final Expression base, final IdentNode property, final boolean isFunction) {
-        super(accessNode, base, isFunction);
+    private AccessNode(final AccessNode accessNode, final Expression base, final IdentNode property, final boolean isFunction, final boolean hasCallSiteType) {
+        super(accessNode, base, isFunction, hasCallSiteType);
         this.property = property;
     }
 
@@ -71,6 +72,13 @@ public final class AccessNode extends BaseNode {
     @Override
     public void toString(final StringBuilder sb) {
         final boolean needsParen = tokenType().needsParens(getBase().tokenType(), true);
+
+        if (hasCallSiteType()) {
+            sb.append('{');
+            final String desc = getType().getDescriptor();
+            sb.append(desc.charAt(desc.length() - 1) == ';' ? "O" : getType().getDescriptor());
+            sb.append('}');
+        }
 
         if (needsParen) {
             sb.append('(');
@@ -99,14 +107,21 @@ public final class AccessNode extends BaseNode {
         if (this.base == base) {
             return this;
         }
-        return new AccessNode(this, base, property, isFunction());
+        return new AccessNode(this, base, property, isFunction(), hasCallSiteType());
     }
 
     private AccessNode setProperty(final IdentNode property) {
         if (this.property == property) {
             return this;
         }
-        return new AccessNode(this, base, property, isFunction());
+        return new AccessNode(this, base, property, isFunction(), hasCallSiteType());
+    }
+
+    @Override
+    public AccessNode setType(final TemporarySymbols ts, final LexicalContext lc, final Type type) {
+        logTypeChange(type);
+        final AccessNode newAccessNode = (AccessNode)setSymbol(lc, getSymbol().setTypeOverrideShared(type, ts));
+        return new AccessNode(newAccessNode, base, property.setType(ts, lc, type), isFunction(), hasCallSiteType());
     }
 
     @Override
@@ -114,7 +129,7 @@ public final class AccessNode extends BaseNode {
         if (isFunction()) {
             return this;
         }
-        return new AccessNode(this, base, property, true);
+        return new AccessNode(this, base, property, true, hasCallSiteType());
     }
 
 }

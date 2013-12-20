@@ -36,7 +36,9 @@ import jdk.nashorn.internal.ir.visitor.NodeVisitor;
  * IR representation for a function call.
  */
 @Immutable
-public final class CallNode extends LexicalContextExpression {
+public final class CallNode extends LexicalContextExpression implements TypeOverride<CallNode> {
+
+    private final Type type;
 
     /** Function identifier or function body. */
     private final Expression function;
@@ -148,16 +150,18 @@ public final class CallNode extends LexicalContextExpression {
         this.function   = function;
         this.args       = args;
         this.flags      = 0;
+        this.type       = null;
         this.evalArgs   = null;
         this.lineNumber = lineNumber;
     }
 
-    private CallNode(final CallNode callNode, final Expression function, final List<Expression> args, final int flags, final EvalArgs evalArgs) {
+    private CallNode(final CallNode callNode, final Expression function, final List<Expression> args, final int flags, final Type type, final EvalArgs evalArgs) {
         super(callNode);
         this.lineNumber = callNode.lineNumber;
         this.function = function;
         this.args = args;
         this.flags = flags;
+        this.type = type;
         this.evalArgs = evalArgs;
     }
 
@@ -171,7 +175,27 @@ public final class CallNode extends LexicalContextExpression {
 
     @Override
     public Type getType() {
+        if (hasCallSiteType()) {
+            return type;
+        }
         return function instanceof FunctionNode ? ((FunctionNode)function).getReturnType() : Type.OBJECT;
+    }
+
+    @Override
+    public CallNode setType(final TemporarySymbols ts, final LexicalContext lc, final Type type) {
+        if (this.type == type) {
+            return this;
+        }
+        return new CallNode(this, function, args, flags, type, evalArgs);
+    }
+
+    private boolean hasCallSiteType() {
+        return this.type != null;
+    }
+
+    @Override
+    public boolean canHaveCallSiteType() {
+        return true;
     }
 
     /**
@@ -188,6 +212,7 @@ public final class CallNode extends LexicalContextExpression {
                     setFunction((Expression)function.accept(visitor)).
                     setArgs(Node.accept(visitor, Expression.class, args)).
                     setFlags(flags).
+                    setType(null, lc, type).
                     setEvalArgs(evalArgs == null ?
                             null :
                             evalArgs.setCode((Expression)evalArgs.getCode().accept(visitor)).
@@ -204,6 +229,13 @@ public final class CallNode extends LexicalContextExpression {
 
     @Override
     public void toString(final StringBuilder sb) {
+        if (hasCallSiteType()) {
+            sb.append('{');
+            final String desc = getType().getDescriptor();
+            sb.append(desc.charAt(desc.length() - 1) == ';' ? 'O' : getType().getDescriptor());
+            sb.append('}');
+        }
+
         function.toString(sb);
 
         sb.append('(');
@@ -239,7 +271,7 @@ public final class CallNode extends LexicalContextExpression {
         if (this.args == args) {
             return this;
         }
-        return new CallNode(this, function, args, flags, evalArgs);
+        return new CallNode(this, function, args, flags, type, evalArgs);
     }
 
     /**
@@ -261,7 +293,7 @@ public final class CallNode extends LexicalContextExpression {
         if (this.evalArgs == evalArgs) {
             return this;
         }
-        return new CallNode(this, function, args, flags, evalArgs);
+        return new CallNode(this, function, args, flags, type, evalArgs);
     }
 
     /**
@@ -289,7 +321,7 @@ public final class CallNode extends LexicalContextExpression {
         if (this.function == function) {
             return this;
         }
-        return new CallNode(this, function, args, flags, evalArgs);
+        return new CallNode(this, function, args, flags, type, evalArgs);
     }
 
     /**
@@ -312,6 +344,6 @@ public final class CallNode extends LexicalContextExpression {
         if (this.flags == flags) {
             return this;
         }
-        return new CallNode(this, function, args, flags, evalArgs);
+        return new CallNode(this, function, args, flags, type, evalArgs);
     }
 }

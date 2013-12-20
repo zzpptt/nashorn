@@ -33,7 +33,6 @@ import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 import java.util.concurrent.Callable;
 import jdk.nashorn.api.scripting.JSObject;
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import jdk.nashorn.internal.runtime.linker.Bootstrap;
 import jdk.nashorn.internal.runtime.linker.InvokeByName;
 
@@ -120,11 +119,10 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
                 });
     }
 
-    /** wrapped object */
     protected final Object obj;
 
     // allow subclasses only in this package
-    ListAdapter(final Object obj) {
+    ListAdapter(Object obj) {
         this.obj = obj;
     }
 
@@ -136,8 +134,7 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
      */
     public static ListAdapter create(final Object obj) {
         if (obj instanceof ScriptObject) {
-            final Object mirror = ScriptObjectMirror.wrap(obj, Context.getGlobal());
-            return new JSObjectListAdapter((JSObject)mirror);
+            return new ScriptObjectListAdapter((ScriptObject)obj);
         } else if (obj instanceof JSObject) {
             return new JSObjectListAdapter((JSObject)obj);
         } else {
@@ -146,32 +143,22 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    public final Object get(final int index) {
+    public final Object get(int index) {
         checkRange(index);
         return getAt(index);
     }
 
-    /**
-     * Get object at an index
-     * @param index index in list
-     * @return object
-     */
     protected abstract Object getAt(final int index);
 
     @Override
-    public Object set(final int index, final Object element) {
+    public Object set(int index, Object element) {
         checkRange(index);
         final Object prevValue = getAt(index);
         setAt(index, element);
         return prevValue;
     }
 
-    /**
-     * Set object at an index
-     * @param index   index in list
-     * @param element element
-     */
-    protected abstract void setAt(final int index, final Object element);
+    protected abstract void setAt(int index, Object element);
 
     private void checkRange(int index) {
         if(index < 0 || index >= size()) {
@@ -180,18 +167,18 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    public final void push(final Object e) {
+    public final void push(Object e) {
         addFirst(e);
     }
 
     @Override
-    public final boolean add(final Object e) {
+    public final boolean add(Object e) {
         addLast(e);
         return true;
     }
 
     @Override
-    public final void addFirst(final Object e) {
+    public final void addFirst(Object e) {
         try {
             final InvokeByName unshiftInvoker = getUNSHIFT();
             final Object fn = unshiftInvoker.getGetter().invokeExact(obj);
@@ -205,7 +192,7 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    public final void addLast(final Object e) {
+    public final void addLast(Object e) {
         try {
             final InvokeByName pushInvoker = getPUSH();
             final Object fn = pushInvoker.getGetter().invokeExact(obj);
@@ -219,7 +206,7 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    public final void add(final int index, final Object e) {
+    public final void add(int index, Object e) {
         try {
             if(index < 0) {
                 throw invalidIndex(index);
@@ -238,35 +225,35 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
                     throw invalidIndex(index);
                 }
             }
-        } catch(final RuntimeException | Error ex) {
+        } catch(RuntimeException | Error ex) {
             throw ex;
-        } catch(final Throwable t) {
+        } catch(Throwable t) {
             throw new RuntimeException(t);
         }
     }
-    private static void checkFunction(final Object fn, final InvokeByName invoke) {
+    private static void checkFunction(Object fn, InvokeByName invoke) {
         if(!(Bootstrap.isCallable(fn))) {
             throw new UnsupportedOperationException("The script object doesn't have a function named " + invoke.getName());
         }
     }
 
-    private static IndexOutOfBoundsException invalidIndex(final int index) {
+    private static IndexOutOfBoundsException invalidIndex(int index) {
         return new IndexOutOfBoundsException(String.valueOf(index));
     }
 
     @Override
-    public final boolean offer(final Object e) {
+    public final boolean offer(Object e) {
         return offerLast(e);
     }
 
     @Override
-    public final boolean offerFirst(final Object e) {
+    public final boolean offerFirst(Object e) {
         addFirst(e);
         return true;
     }
 
     @Override
-    public final boolean offerLast(final Object e) {
+    public final boolean offerLast(Object e) {
         addLast(e);
         return true;
     }
@@ -300,7 +287,7 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    public final Object remove(final int index) {
+    public final Object remove(int index) {
         if(index < 0) {
             throw invalidIndex(index);
         } else if (index == 0) {
@@ -346,11 +333,11 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    protected final void removeRange(final int fromIndex, final int toIndex) {
+    protected final void removeRange(int fromIndex, int toIndex) {
         invokeSpliceRemove(fromIndex, toIndex - fromIndex);
     }
 
-    private void invokeSpliceRemove(final int fromIndex, final int count) {
+    private void invokeSpliceRemove(int fromIndex, int count) {
         try {
             final InvokeByName spliceRemoveInvoker = getSPLICE_REMOVE();
             final Object fn = spliceRemoveInvoker.getGetter().invokeExact(obj);
@@ -432,16 +419,16 @@ public abstract class ListAdapter extends AbstractList<Object> implements Random
     }
 
     @Override
-    public final boolean removeFirstOccurrence(final Object o) {
+    public final boolean removeFirstOccurrence(Object o) {
         return removeOccurrence(o, iterator());
     }
 
     @Override
-    public final boolean removeLastOccurrence(final Object o) {
+    public final boolean removeLastOccurrence(Object o) {
         return removeOccurrence(o, descendingIterator());
     }
 
-    private static boolean removeOccurrence(final Object o, final Iterator<Object> it) {
+    private static boolean removeOccurrence(Object o, Iterator<Object> it) {
         while(it.hasNext()) {
             final Object e = it.next();
             if(o == null ? e == null : o.equals(e)) {

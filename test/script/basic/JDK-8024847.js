@@ -100,9 +100,3 @@ var obj = new JSObject() {
 var jlist = Java.to(obj, java.util.List);
 print(jlist instanceof java.util.List);
 print(jlist);
-
-var obj = new JSObject() {
-    toNumber: function() { return 42; }
-};
-
-print(32 + obj);

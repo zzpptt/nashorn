@@ -33,7 +33,7 @@ try {
     eval('"" ~ ""');
     print("FAILED: SyntaxError expected for: \"\" ~ \"\"");
 } catch (e) {
-    printError(e);
+    print(e.toString().replace(/\\/g, '/'));
 }
 
 // Used to crash instead of SyntaxError
@@ -41,7 +41,7 @@ try {
     eval("function() { if (1~0) return 0; return 1 }");
     print("FAILED: SyntaxError expected for: if (1~0) ");
 } catch (e) {
-    printError(e);
+    print(e.toString().replace(/\\/g, '/'));
 }
 
 // The following are valid, but used to crash

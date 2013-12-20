@@ -56,6 +56,10 @@ final class BranchOptimizer {
         branchOptimizer(node, label, state);
     }
 
+    private void load(final Expression node) {
+        codegen.load(node);
+    }
+
     private void branchOptimizer(final UnaryNode unaryNode, final Label label, final boolean state) {
         final Expression rhs = unaryNode.rhs();
 
@@ -63,16 +67,19 @@ final class BranchOptimizer {
         case NOT:
             branchOptimizer(rhs, label, !state);
             return;
-        default:
+        case CONVERT:
             if (unaryNode.getType().isBoolean()) {
                 branchOptimizer(rhs, label, state);
                 return;
             }
             break;
+        default:
+            break;
         }
 
         // convert to boolean
-        codegen.load(unaryNode, Type.BOOLEAN);
+        load(unaryNode);
+        method.convert(Type.BOOLEAN);
         if (state) {
             method.ifne(label);
         } else {
@@ -111,33 +118,45 @@ final class BranchOptimizer {
 
         case EQ:
         case EQ_STRICT:
-            codegen.loadBinaryOperands(lhs, rhs, Type.widest(lhs.getType(), rhs.getType()));
+            assert rhs.getType().isEquivalentTo(lhs.getType()) : "type mismatch: " + lhs.getSymbol() + " to " + rhs.getSymbol();
+            load(lhs);
+            load(rhs);
             method.conditionalJump(state ? EQ : NE, true, label);
             return;
 
         case NE:
         case NE_STRICT:
-            codegen.loadBinaryOperands(lhs, rhs, Type.widest(lhs.getType(), rhs.getType()));
+            assert rhs.getType().isEquivalentTo(lhs.getType()) : "type mismatch: " + lhs.getSymbol() + " to " + rhs.getSymbol();
+            load(lhs);
+            load(rhs);
             method.conditionalJump(state ? NE : EQ, true, label);
             return;
 
         case GE:
-            codegen.loadBinaryOperands(lhs, rhs, Type.widest(lhs.getType(), rhs.getType()));
+            assert rhs.getType().isEquivalentTo(lhs.getType()) : "type mismatch: " + lhs.getSymbol() + " to " + rhs.getSymbol();
+            load(lhs);
+            load(rhs);
             method.conditionalJump(state ? GE : LT, !state, label);
             return;
 
         case GT:
-            codegen.loadBinaryOperands(lhs, rhs, Type.widest(lhs.getType(), rhs.getType()));
+            assert rhs.getType().isEquivalentTo(lhs.getType()) : "type mismatch: " + lhs.getSymbol() + " to " + rhs.getSymbol();
+            load(lhs);
+            load(rhs);
             method.conditionalJump(state ? GT : LE, !state, label);
             return;
 
         case LE:
-            codegen.loadBinaryOperands(lhs, rhs, Type.widest(lhs.getType(), rhs.getType()));
+            assert rhs.getType().isEquivalentTo(lhs.getType()) : "type mismatch: " + lhs.getSymbol() + " to " + rhs.getSymbol();
+            load(lhs);
+            load(rhs);
             method.conditionalJump(state ? LE : GT, state, label);
             return;
 
         case LT:
-            codegen.loadBinaryOperands(lhs, rhs, Type.widest(lhs.getType(), rhs.getType()));
+            assert rhs.getType().isEquivalentTo(lhs.getType()) : "type mismatch: " + lhs.getSymbol() + " to " + rhs.getSymbol() + " in " + binaryNode;
+            load(lhs);
+            load(rhs);
             method.conditionalJump(state ? LT : GE, state, label);
             return;
 
@@ -145,7 +164,8 @@ final class BranchOptimizer {
             break;
         }
 
-        codegen.load(binaryNode, Type.BOOLEAN);
+        load(binaryNode);
+        method.convert(Type.BOOLEAN);
         if (state) {
             method.ifne(label);
         } else {
@@ -167,7 +187,8 @@ final class BranchOptimizer {
             }
         }
 
-        codegen.load(node, Type.BOOLEAN);
+        load(node);
+        method.convert(Type.BOOLEAN);
         if (state) {
             method.ifne(label);
         } else {

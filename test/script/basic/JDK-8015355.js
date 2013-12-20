@@ -28,6 +28,10 @@
  * @run
  */
 
+function fail(msg) {
+    print(msg);
+}
+
 function check(callback) {
     try {
         callback();

@@ -32,6 +32,7 @@ import static jdk.nashorn.internal.codegen.types.Type.OBJECT;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
 import jdk.nashorn.internal.codegen.types.Type;
 import jdk.nashorn.internal.ir.Expression;
 import jdk.nashorn.internal.ir.LiteralNode;
@@ -142,7 +143,7 @@ public class SpillObjectCreator extends ObjectCreator {
                 method.dup();
                 method.getField(Type.getInternalName(ScriptObject.class), "spill", Type.OBJECT_ARRAY.getDescriptor());
                 method.load(property.getSlot());
-                codegen.load(values.get(i), OBJECT);
+                codegen.load(values.get(i)).convert(OBJECT);
                 method.arraystore();
             }
         }

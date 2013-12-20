@@ -109,7 +109,7 @@ public final class JavaAdapterFactory {
         if (sm != null) {
             for (Class<?> type : types) {
                 // check for restricted package access
-                Context.checkPackageAccess(type);
+                Context.checkPackageAccess(type.getName());
             }
         }
         return getAdapterInfo(types).getAdapterClassFor(classOverrides);

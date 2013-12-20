@@ -57,7 +57,10 @@ public final class ConsString implements CharSequence {
 
     @Override
     public String toString() {
-        return (String) flattened();
+        if (!flat) {
+            flatten();
+        }
+        return (String) left;
     }
 
     @Override
@@ -67,19 +70,18 @@ public final class ConsString implements CharSequence {
 
     @Override
     public char charAt(final int index) {
-        return flattened().charAt(index);
+        if (!flat) {
+            flatten();
+        }
+        return left.charAt(index);
     }
 
     @Override
     public CharSequence subSequence(final int start, final int end) {
-        return flattened().subSequence(start, end);
-    }
-
-    private CharSequence flattened() {
         if (!flat) {
             flatten();
         }
-        return left;
+        return left.subSequence(start, end);
     }
 
     private void flatten() {

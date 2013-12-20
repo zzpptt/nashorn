@@ -100,9 +100,8 @@ final class JavaSuperAdapterLinker implements TypeBasedGuardingDynamicLinker {
                 type.changeParameterType(0, adapterClass), 0);
 
         // Delegate to BeansLinker
-        final GuardedInvocation guardedInv = NashornBeansLinker.getGuardedInvocation(
-                BeansLinker.getLinkerForClass(adapterClass), linkRequest.replaceArguments(newDescriptor, args),
-                linkerServices);
+        final GuardedInvocation guardedInv = BeansLinker.getLinkerForClass(adapterClass).getGuardedInvocation(
+                linkRequest.replaceArguments(newDescriptor, args), linkerServices);
 
         final MethodHandle guard = IS_ADAPTER_OF_CLASS.bindTo(adapterClass);
         if(guardedInv == null) {

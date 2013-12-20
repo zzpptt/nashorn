@@ -40,7 +40,7 @@ final class FinalScriptFunctionData extends ScriptFunctionData {
      *
      * @param name          name
      * @param arity         arity
-     * @param functions     precompiled code
+     * @param list          precompiled code
      * @param isStrict      strict
      * @param isBuiltin     builtin
      * @param isConstructor constructor
@@ -73,13 +73,12 @@ final class FinalScriptFunctionData extends ScriptFunctionData {
     }
 
     private void addInvoker(final MethodHandle mh) {
+        boolean needsCallee = needsCallee(mh);
         if (isConstructor(mh)) {
-            // only nasgen constructors: (boolean, self, args) are subject to binding a boolean newObj. isConstructor
-            // is too conservative a check. However, isConstructor(mh) always implies isConstructor param
+            //only nasgen constructors: (boolean, self, args) are subject to binding a boolean newObj. isConstructor
+            //is too conservative a check. However, isConstructor(mh) always implies isConstructor param
             assert isConstructor();
-            final MethodHandle invoker = MH.insertArguments(mh, 0, false);
-            final MethodHandle constructor = composeConstructor(MH.insertArguments(mh, 0, true));
-            code.add(new CompiledFunction(mh.type(), invoker, constructor));
+            code.add(new CompiledFunction(mh.type(), MH.insertArguments(mh, 0, false), composeConstructor(MH.insertArguments(mh, 0, true), needsCallee))); //make sure callee state can be determined when we reach constructor
         } else {
             code.add(new CompiledFunction(mh.type(), mh));
         }

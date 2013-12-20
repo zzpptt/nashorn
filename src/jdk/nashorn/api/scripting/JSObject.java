@@ -30,12 +30,14 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * This interface can be implemented by an arbitrary Java class. Nashorn will
+ * This is the base class for nashorn ScriptObjectMirror class.
+ *
+ * This class can also be subclassed by an arbitrary Java class. Nashorn will
  * treat objects of such classes just like nashorn script objects. Usual nashorn
  * operations like obj[i], obj.foo, obj.func(), delete obj.foo will be glued
- * to appropriate method call of this interface.
+ * to appropriate method call of this class.
  */
-public interface JSObject {
+public abstract class JSObject {
     /**
      * Call this object as a JavaScript function. This is equivalent to
      * 'func.apply(thiz, args)' in JavaScript.
@@ -44,7 +46,9 @@ public interface JSObject {
      * @param args arguments to method
      * @return result of call
      */
-    public Object call(final Object thiz, final Object... args);
+    public Object call(Object thiz, Object... args) {
+        throw new UnsupportedOperationException("call");
+    }
 
     /**
      * Call this 'constructor' JavaScript function to create a new object.
@@ -53,7 +57,9 @@ public interface JSObject {
      * @param args arguments to method
      * @return result of constructor call
      */
-    public Object newObject(final Object... args);
+    public Object newObject(Object... args) {
+        throw new UnsupportedOperationException("newObject");
+    }
 
     /**
      * Evaluate a JavaScript expression.
@@ -61,7 +67,20 @@ public interface JSObject {
      * @param s JavaScript expression to evaluate
      * @return evaluation result
      */
-    public Object eval(final String s);
+    public Object eval(String s) {
+        throw new UnsupportedOperationException("eval");
+    }
+
+    /**
+     * Call a JavaScript function member of this object.
+     *
+     * @param name name of the member function to call
+     * @param args arguments to be passed to the member function
+     * @return result of call
+     */
+    public Object callMember(String name, Object... args) {
+        throw new UnsupportedOperationException("call");
+    }
 
     /**
      * Retrieves a named member of this JavaScript object.
@@ -69,7 +88,9 @@ public interface JSObject {
      * @param name of member
      * @return member
      */
-    public Object getMember(final String name);
+    public Object getMember(String name) {
+        return null;
+    }
 
     /**
      * Retrieves an indexed member of this JavaScript object.
@@ -77,7 +98,9 @@ public interface JSObject {
      * @param index index slot to retrieve
      * @return member
      */
-    public Object getSlot(final int index);
+    public Object getSlot(int index) {
+        return null;
+    }
 
     /**
      * Does this object have a named member?
@@ -85,7 +108,9 @@ public interface JSObject {
      * @param name name of member
      * @return true if this object has a member of the given name
      */
-    public boolean hasMember(final String name);
+    public boolean hasMember(String name) {
+        return false;
+    }
 
     /**
      * Does this object have a indexed property?
@@ -93,14 +118,17 @@ public interface JSObject {
      * @param slot index to check
      * @return true if this object has a slot
      */
-    public boolean hasSlot(final int slot);
+    public boolean hasSlot(int slot) {
+        return false;
+    }
 
     /**
      * Remove a named member from this JavaScript object
      *
      * @param name name of the member
      */
-    public void removeMember(final String name);
+    public void removeMember(String name) {
+    }
 
     /**
      * Set a named member in this JavaScript object
@@ -108,7 +136,8 @@ public interface JSObject {
      * @param name  name of the member
      * @param value value of the member
      */
-    public void setMember(final String name, final Object value);
+    public void setMember(String name, Object value) {
+    }
 
     /**
      * Set an indexed member in this JavaScript object
@@ -116,7 +145,8 @@ public interface JSObject {
      * @param index index of the member slot
      * @param value value of the member
      */
-    public void setSlot(final int index, final Object value);
+    public void setSlot(int index, Object value) {
+    }
 
     // property and value iteration
 
@@ -125,14 +155,20 @@ public interface JSObject {
      *
      * @return set of property names
      */
-    public Set<String> keySet();
+    @SuppressWarnings("unchecked")
+    public Set<String> keySet() {
+        return Collections.EMPTY_SET;
+    }
 
     /**
      * Returns the set of all property values of this object.
      *
      * @return set of property values.
      */
-    public Collection<Object> values();
+    @SuppressWarnings("unchecked")
+    public Collection<Object> values() {
+        return Collections.EMPTY_SET;
+    }
 
     // JavaScript instanceof check
 
@@ -142,7 +178,9 @@ public interface JSObject {
      * @param instance instace to check
      * @return true if the given 'instance' is an instance of this 'function' object
      */
-    public boolean isInstance(final Object instance);
+    public boolean isInstance(final Object instance) {
+        return false;
+    }
 
     /**
      * Checking whether this object is an instance of the given 'clazz' object.
@@ -150,40 +188,47 @@ public interface JSObject {
      * @param clazz clazz to check
      * @return true if this object is an instance of the given 'clazz'
      */
-    public boolean isInstanceOf(final Object clazz);
+    public boolean isInstanceOf(final Object clazz) {
+        if (clazz instanceof JSObject) {
+            return ((JSObject)clazz).isInstance(this);
+        }
+
+        return false;
+    }
 
     /**
      * ECMA [[Class]] property
      *
      * @return ECMA [[Class]] property value of this object
      */
-    public String getClassName();
+    public String getClassName() {
+        return getClass().getName();
+    }
 
     /**
      * Is this a function object?
      *
      * @return if this mirror wraps a ECMAScript function instance
      */
-    public boolean isFunction();
+    public boolean isFunction() {
+        return false;
+    }
 
     /**
      * Is this a 'use strict' function object?
      *
      * @return true if this mirror represents a ECMAScript 'use strict' function
      */
-    public boolean isStrictFunction();
+    public boolean isStrictFunction() {
+        return false;
+    }
 
     /**
      * Is this an array object?
      *
      * @return if this mirror wraps a ECMAScript array object
      */
-    public boolean isArray();
-
-    /**
-     * Returns this object's numeric value.
-     *
-     * @return this object's numeric value.
-     */
-    public double toNumber();
+    public boolean isArray() {
+        return false;
+    }
 }

@@ -297,6 +297,11 @@ final class WeighNodes extends NodeOperatorVisitor<LexicalContext> {
     }
 
     @Override
+    public Node leaveCONVERT(final UnaryNode unaryNode) {
+        return unaryNodeWeight(unaryNode);
+    }
+
+    @Override
     public Node leaveDECINC(final UnaryNode unaryNode) {
          return unaryNodeWeight(unaryNode);
     }

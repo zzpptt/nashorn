@@ -153,7 +153,8 @@ class ObjectType extends Type {
         } else if (to.isBoolean()) {
             invokeStatic(method, JSType.TO_BOOLEAN);
         } else if (to.isString()) {
-            invokeStatic(method, JSType.TO_PRIMITIVE_TO_STRING);
+            invokeStatic(method, JSType.TO_PRIMITIVE);
+            invokeStatic(method, JSType.TO_STRING);
         } else {
             assert false : "Illegal conversion " + this + " -> " + to + " " + isString() + " " + toString;
         }

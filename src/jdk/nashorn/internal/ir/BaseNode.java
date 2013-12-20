@@ -25,6 +25,10 @@
 
 package jdk.nashorn.internal.ir;
 
+import static jdk.nashorn.internal.codegen.ObjectClassGenerator.DEBUG_FIELDS;
+
+import jdk.nashorn.internal.codegen.ObjectClassGenerator;
+import jdk.nashorn.internal.codegen.types.Type;
 import jdk.nashorn.internal.ir.annotations.Immutable;
 
 /**
@@ -34,12 +38,14 @@ import jdk.nashorn.internal.ir.annotations.Immutable;
  * @see IndexNode
  */
 @Immutable
-public abstract class BaseNode extends Expression implements FunctionCall {
+public abstract class BaseNode extends Expression implements FunctionCall, TypeOverride<BaseNode> {
 
     /** Base Node. */
     protected final Expression base;
 
     private final boolean isFunction;
+
+    private final boolean hasCallSiteType;
 
     /**
      * Constructor
@@ -48,11 +54,13 @@ public abstract class BaseNode extends Expression implements FunctionCall {
      * @param finish finish
      * @param base   base node
      * @param isFunction is this a function
+     * @param hasCallSiteType does this access have a callsite type
      */
-    public BaseNode(final long token, final int finish, final Expression base, final boolean isFunction) {
+    public BaseNode(final long token, final int finish, final Expression base, final boolean isFunction, final boolean hasCallSiteType) {
         super(token, base.getStart(), finish);
         this.base            = base;
         this.isFunction      = isFunction;
+        this.hasCallSiteType = hasCallSiteType;
     }
 
     /**
@@ -60,11 +68,13 @@ public abstract class BaseNode extends Expression implements FunctionCall {
      * @param baseNode node to inherit from
      * @param base base
      * @param isFunction is this a function
+     * @param hasCallSiteType does this access have a callsite type
      */
-    protected BaseNode(final BaseNode baseNode, final Expression base, final boolean isFunction) {
+    protected BaseNode(final BaseNode baseNode, final Expression base, final boolean isFunction, final boolean hasCallSiteType) {
         super(baseNode);
         this.base            = base;
         this.isFunction      = isFunction;
+        this.hasCallSiteType = hasCallSiteType;
     }
 
     /**
@@ -86,4 +96,26 @@ public abstract class BaseNode extends Expression implements FunctionCall {
      */
     public abstract BaseNode setIsFunction();
 
+    @Override
+    public boolean canHaveCallSiteType() {
+        return true; //carried by the symbol and always the same nodetype==symboltype
+    }
+
+    /**
+     * Does the access have a call site type override?
+     * @return true if overridden
+     */
+    protected boolean hasCallSiteType() {
+        return hasCallSiteType;
+    }
+
+    /**
+     * Debug type change
+     * @param type new type
+     */
+    protected final void logTypeChange(final Type type) {
+        if (DEBUG_FIELDS && !Type.areEquivalent(getSymbol().getSymbolType(), type)) {
+            ObjectClassGenerator.LOG.info(getClass().getName(), " ", this, " => ", type, " instead of ", getType());
+        }
+    }
 }

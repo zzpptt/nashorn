@@ -292,16 +292,6 @@ public abstract class Type implements Comparable<Type>, BytecodeOps {
     }
 
     /**
-     * Determines whether this type represents an primitive type according to the ECMAScript specification,
-     * which includes Boolean, Number, and String.
-     *
-     * @return true if a JavaScript primitive type, false otherwise.
-     */
-    public boolean isJSPrimitive() {
-        return !isObject() || isString();
-    }
-
-    /**
      * Determines whether a type is the BOOLEAN type
      * @return true if BOOLEAN, false otherwise
      */
@@ -451,12 +441,7 @@ public abstract class Type implements Comparable<Type>, BytecodeOps {
         if (type0.isArray() && type1.isArray()) {
             return ((ArrayType)type0).getElementType() == ((ArrayType)type1).getElementType() ? type0 : Type.OBJECT;
         } else if (type0.isArray() != type1.isArray()) {
-            //array and non array is always object, widest(Object[], int) NEVER returns Object[], which has most weight. that does not make sense
-            return Type.OBJECT;
-        } else if (type0.isObject() && type1.isObject() && type0.getTypeClass() != type1.getTypeClass()) {
-            // Object<type=String> and Object<type=ScriptFunction> will produce Object
-            // TODO: maybe find most specific common superclass?
-            return Type.OBJECT;
+            return Type.OBJECT; //array and non array is always object, widest(Object[], int) NEVER returns Object[], which has most weight. that does not make sense
         }
         return type0.weight() > type1.weight() ? type0 : type1;
     }

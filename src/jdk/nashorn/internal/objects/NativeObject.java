@@ -60,7 +60,6 @@ import jdk.nashorn.internal.runtime.ScriptObject;
 import jdk.nashorn.internal.runtime.ScriptRuntime;
 import jdk.nashorn.internal.runtime.linker.Bootstrap;
 import jdk.nashorn.internal.runtime.linker.InvokeByName;
-import jdk.nashorn.internal.runtime.linker.NashornBeansLinker;
 
 /**
  * ECMA 15.2 Object objects
@@ -730,7 +729,8 @@ public final class NativeObject {
             final MethodType methodType, final Object source) {
         final GuardedInvocation inv;
         try {
-            inv = NashornBeansLinker.getGuardedInvocation(linker, createLinkRequest(operation, methodType, source), Bootstrap.getLinkerServices());
+            inv = linker.getGuardedInvocation(createLinkRequest(operation, methodType, source),
+                Bootstrap.getLinkerServices());
             assert passesGuard(source, inv.getGuard());
         } catch(RuntimeException|Error e) {
             throw e;

@@ -48,7 +48,6 @@ final class CompiledFunction implements Comparable<CompiledFunction> {
     }
 
     CompiledFunction(final MethodType type, final MethodHandle invoker, final MethodHandle constructor) {
-        assert type != null;
         this.type        = type;
         this.invoker     = invoker;
         this.constructor = constructor;
@@ -81,37 +80,7 @@ final class CompiledFunction implements Comparable<CompiledFunction> {
 
     @Override
     public int compareTo(final CompiledFunction o) {
-        return compareMethodTypes(type(), o.type());
-    }
-
-    private static int compareMethodTypes(final MethodType ownType, final MethodType otherType) {
-        // Comparable interface demands that compareTo() should only return 0 if objects are equal.
-        // Failing to meet this requirement causes same weight functions to replace each other in TreeSet,
-        // so we go some lengths to come up with an ordering between same weight functions,
-        // first falling back to parameter count and then to hash code.
-        if (ownType.equals(otherType)) {
-            return 0;
-        }
-
-        final int diff = weight(ownType) - weight(otherType);
-        if (diff != 0) {
-            return diff;
-        }
-        if (ownType.parameterCount() != otherType.parameterCount()) {
-            return ownType.parameterCount() - otherType.parameterCount();
-        }
-        // We're just interested in not returning 0 here, not correct ordering
-        return ownType.hashCode() - otherType.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof CompiledFunction && type().equals(((CompiledFunction)obj).type());
-    }
-
-    @Override
-    public int hashCode() {
-        return type().hashCode();
+        return weight() - o.weight();
     }
 
     private int weight() {
@@ -150,14 +119,14 @@ final class CompiledFunction implements Comparable<CompiledFunction> {
      * a semantically equivalent linkage can be performed.
      *
      * @param mt type to check against
-     * @return true if types are compatible
+     * @return
      */
     boolean typeCompatible(final MethodType mt) {
-        final int wantedParamCount   = mt.parameterCount();
-        final int existingParamCount = type.parameterCount();
+        final Class<?>[] wantedParams   = mt.parameterArray();
+        final Class<?>[] existingParams = type().parameterArray();
 
         //if we are not examining a varargs type, the number of parameters must be the same
-        if (wantedParamCount != existingParamCount && !isVarArgsType(mt)) {
+        if (wantedParams.length != existingParams.length && !isVarArgsType(mt)) {
             return false;
         }
 
@@ -165,10 +134,10 @@ final class CompiledFunction implements Comparable<CompiledFunction> {
         //parameters lengths do not match is if our type ends with a varargs argument.
         //then every trailing parameter in the given callsite can be folded into it, making
         //us compatible (albeit slower than a direct specialization)
-        final int lastParamIndex = Math.min(wantedParamCount, existingParamCount);
+        final int lastParamIndex = Math.min(wantedParams.length, existingParams.length);
         for (int i = 0; i < lastParamIndex; i++) {
-            final Type w = Type.typeFor(mt.parameterType(i));
-            final Type e = Type.typeFor(type.parameterType(i));
+            final Type w = Type.typeFor(wantedParams[i]);
+            final Type e = Type.typeFor(existingParams[i]);
 
             //don't specialize on booleans, we have the "true" vs int 1 ambiguity in resolution
             //we also currently don't support boolean as a javascript function callsite type.

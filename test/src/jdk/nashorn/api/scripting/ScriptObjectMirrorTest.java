@@ -26,7 +26,6 @@
 package jdk.nashorn.api.scripting;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -130,7 +129,7 @@ public class ScriptObjectMirrorTest {
         final ScriptEngine e = m.getEngineByName("nashorn");
         try {
             e.eval("var obj = { '1': 'world', func: function() { return this.bar; }, bar: 'hello' }");
-            ScriptObjectMirror obj = (ScriptObjectMirror) e.get("obj");
+            JSObject obj = (JSObject) e.get("obj");
 
             // try basic get on existing properties
             if (!obj.getMember("bar").equals("hello")) {
@@ -227,29 +226,5 @@ public class ScriptObjectMirrorTest {
         final ScriptObjectMirror e2obj = (ScriptObjectMirror)e2.eval("({ foo: func })");
         final Object newObj = ((ScriptObjectMirror)e2obj.getMember("foo")).newObject();
         assertTrue(newObj instanceof ScriptObjectMirror);
-    }
-
-    @Test
-    public void conversionTest() throws ScriptException {
-        final ScriptEngineManager m = new ScriptEngineManager();
-        final ScriptEngine e = m.getEngineByName("nashorn");
-        final ScriptObjectMirror arr = (ScriptObjectMirror)e.eval("[33, 45, 23]");
-        final int[] intArr = arr.to(int[].class);
-        assertEquals(intArr[0], 33);
-        assertEquals(intArr[1], 45);
-        assertEquals(intArr[2], 23);
-
-        final List<?> list = arr.to(List.class);
-        assertEquals(list.get(0), 33);
-        assertEquals(list.get(1), 45);
-        assertEquals(list.get(2), 23);
-
-        ScriptObjectMirror obj = (ScriptObjectMirror)e.eval(
-            "({ valueOf: function() { return 42 } })");
-        assertEquals(Double.valueOf(42.0), obj.to(Double.class));
-
-        obj = (ScriptObjectMirror)e.eval(
-            "({ toString: function() { return 'foo' } })");
-        assertEquals("foo", obj.to(String.class));
     }
 }

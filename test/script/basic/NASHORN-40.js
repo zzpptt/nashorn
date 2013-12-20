@@ -31,11 +31,11 @@
 try {
     eval("print(.foo)");
 } catch (e) {
-    printError(e);
+    print(e.toString().replace(/\\/g, '/'));
 }
 
 try {
     eval(".bar = 3423;");
 } catch (e) {
-    printError(e);
+    print(e.toString().replace(/\\/g, '/'));
 }

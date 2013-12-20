@@ -38,7 +38,7 @@ import jdk.nashorn.internal.parser.TokenType;
  * IR representation for a runtime call.
  */
 @Immutable
-public class RuntimeNode extends Expression {
+public class RuntimeNode extends Expression implements TypeOverride<RuntimeNode> {
 
     /**
      * Request enum used for meta-information about the runtime request
@@ -159,36 +159,6 @@ public class RuntimeNode extends Expression {
         }
 
         /**
-         * Derive a runtime node request type for a node
-         * @param node the node
-         * @return request type
-         */
-        public static Request requestFor(final Node node) {
-            assert node.isComparison();
-            switch (node.tokenType()) {
-            case EQ_STRICT:
-                return Request.EQ_STRICT;
-            case NE_STRICT:
-                return Request.NE_STRICT;
-            case EQ:
-                return Request.EQ;
-            case NE:
-                return Request.NE;
-            case LT:
-                return Request.LT;
-            case LE:
-                return Request.LE;
-            case GT:
-                return Request.GT;
-            case GE:
-                return Request.GE;
-            default:
-                assert false;
-                return null;
-            }
-        }
-
-        /**
          * Is this an EQ or EQ_STRICT?
          *
          * @param request a request
@@ -298,6 +268,9 @@ public class RuntimeNode extends Expression {
     /** Call arguments. */
     private final List<Expression> args;
 
+    /** Call site override - e.g. we know that a ScriptRuntime.ADD will return an int */
+    private final Type callSiteType;
+
     /** is final - i.e. may not be removed again, lower in the code pipeline */
     private final boolean isFinal;
 
@@ -314,14 +287,16 @@ public class RuntimeNode extends Expression {
 
         this.request      = request;
         this.args         = args;
+        this.callSiteType = null;
         this.isFinal      = false;
     }
 
-    private RuntimeNode(final RuntimeNode runtimeNode, final Request request, final boolean isFinal, final List<Expression> args) {
+    private RuntimeNode(final RuntimeNode runtimeNode, final Request request, final Type callSiteType, final boolean isFinal, final List<Expression> args) {
         super(runtimeNode);
 
         this.request      = request;
         this.args         = args;
+        this.callSiteType = callSiteType;
         this.isFinal      = isFinal;
     }
 
@@ -360,6 +335,7 @@ public class RuntimeNode extends Expression {
 
         this.request      = request;
         this.args         = args;
+        this.callSiteType = null;
         this.isFinal      = false;
     }
 
@@ -400,7 +376,7 @@ public class RuntimeNode extends Expression {
         if (this.isFinal == isFinal) {
             return this;
         }
-        return new RuntimeNode(this, request, isFinal, args);
+        return new RuntimeNode(this, request, callSiteType, isFinal, args);
     }
 
     /**
@@ -408,7 +384,24 @@ public class RuntimeNode extends Expression {
      */
     @Override
     public Type getType() {
-        return request.getReturnType();
+        return hasCallSiteType() ? callSiteType : request.getReturnType();
+    }
+
+    @Override
+    public RuntimeNode setType(final TemporarySymbols ts, final LexicalContext lc, final Type type) {
+        if (this.callSiteType == type) {
+            return this;
+        }
+        return new RuntimeNode(this, request, type, isFinal, args);
+    }
+
+    @Override
+    public boolean canHaveCallSiteType() {
+        return request == Request.ADD;
+    }
+
+    private boolean hasCallSiteType() {
+        return callSiteType != null;
     }
 
     @Override
@@ -457,7 +450,7 @@ public class RuntimeNode extends Expression {
         if (this.args == args) {
             return this;
         }
-        return new RuntimeNode(this, request, isFinal, args);
+        return new RuntimeNode(this, request, callSiteType, isFinal, args);
     }
 
     /**

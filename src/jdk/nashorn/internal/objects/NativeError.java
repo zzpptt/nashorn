@@ -30,7 +30,6 @@ import static jdk.nashorn.internal.lookup.Lookup.MH;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-
 import jdk.nashorn.api.scripting.NashornException;
 import jdk.nashorn.internal.objects.annotations.Attribute;
 import jdk.nashorn.internal.objects.annotations.Constructor;
@@ -38,12 +37,10 @@ import jdk.nashorn.internal.objects.annotations.Function;
 import jdk.nashorn.internal.objects.annotations.Property;
 import jdk.nashorn.internal.objects.annotations.ScriptClass;
 import jdk.nashorn.internal.objects.annotations.Where;
-import jdk.nashorn.internal.objects.ScriptFunctionImpl;
 import jdk.nashorn.internal.runtime.ECMAException;
 import jdk.nashorn.internal.runtime.JSType;
 import jdk.nashorn.internal.runtime.PropertyMap;
 import jdk.nashorn.internal.runtime.ScriptObject;
-import jdk.nashorn.internal.runtime.ScriptFunction;
 import jdk.nashorn.internal.runtime.ScriptRuntime;
 
 /**
@@ -136,16 +133,12 @@ public final class NativeError extends ScriptObject {
      * @param errorObj the error object
      * @return undefined
      */
-    @SuppressWarnings("unused")
     @Function(attributes = Attribute.NOT_ENUMERABLE, where = Where.CONSTRUCTOR)
     public static Object captureStackTrace(final Object self, final Object errorObj) {
         Global.checkObject(errorObj);
         final ScriptObject sobj = (ScriptObject)errorObj;
-        new ECMAException(sobj, null); //constructor has side effects
-        sobj.delete("stack", false);
-        final ScriptFunction getStack = ScriptFunctionImpl.makeFunction("getStack", GET_STACK);
-        final ScriptFunction setStack = ScriptFunctionImpl.makeFunction("setStack", SET_STACK);
-        sobj.addOwnProperty("stack", Attribute.NOT_ENUMERABLE, getStack, setStack);
+        final ECMAException exp = new ECMAException(sobj, null);
+        sobj.set("stack", getScriptStackString(sobj, exp), false);
         return UNDEFINED;
     }
 

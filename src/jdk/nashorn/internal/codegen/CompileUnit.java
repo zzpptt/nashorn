@@ -28,7 +28,7 @@ package jdk.nashorn.internal.codegen;
 /**
  * Used to track split class compilation.
  */
-public class CompileUnit implements Comparable<CompileUnit> {
+public class CompileUnit {
     /** Current class name */
     private final String className;
 
@@ -115,10 +115,5 @@ public class CompileUnit implements Comparable<CompileUnit> {
     @Override
     public String toString() {
         return "[classname=" + className + " weight=" + weight + '/' + Splitter.SPLIT_THRESHOLD + ']';
-    }
-
-    @Override
-    public int compareTo(CompileUnit o) {
-        return className.compareTo(o.className);
     }
 }

@@ -178,6 +178,7 @@ public enum TokenType {
     ARRAY          (LITERAL,  null),
 
     COMMALEFT      (IR,       null),
+    CONVERT        (IR,       null),
     DISCARD        (IR,       null),
     DECPOSTFIX     (IR,       null),
     INCPOSTFIX     (IR,       null);

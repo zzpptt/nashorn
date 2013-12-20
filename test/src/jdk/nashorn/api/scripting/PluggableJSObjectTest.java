@@ -46,7 +46,7 @@ import org.testng.annotations.Test;
  * JSObject implementations.
  */
 public class PluggableJSObjectTest {
-    public static class MapWrapperObject extends AbstractJSObject {
+    public static class MapWrapperObject extends JSObject {
         private final HashMap<String, Object> map = new LinkedHashMap<>();
 
         public HashMap<String, Object> getMap() {
@@ -109,7 +109,7 @@ public class PluggableJSObjectTest {
         }
     }
 
-    public static class BufferObject extends AbstractJSObject {
+    public static class BufferObject extends JSObject {
         private final IntBuffer buf;
 
         public BufferObject(int size) {
@@ -170,7 +170,7 @@ public class PluggableJSObjectTest {
         }
     }
 
-    public static class Adder extends AbstractJSObject {
+    public static class Adder extends JSObject {
         @Override
         public Object call(Object thiz, Object... args) {
             double res = 0.0;
@@ -202,7 +202,7 @@ public class PluggableJSObjectTest {
         }
     }
 
-    public static class Factory extends AbstractJSObject {
+    public static class Factory extends JSObject {
         @Override
         public Object newObject(Object... args) {
             return new HashMap<Object, Object>();
